@@ -1,6 +1,6 @@
 {% if not main_node %}{{ '\n' }}{% endif %}
 {% if ordered %}\begin{enumerate}{% else %}\begin{itemize}{% endif %}
 {{ '\n' }}
-{{ items }}
+{{ content }}
 {% if ordered %}\end{enumerate}{% else %}\end{itemize}{% endif %}
 {% if main_node %}{{ '\n' }}{{ '\n' }}{% endif %}

@@ -4,7 +4,7 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "mau_tex_visitor"
-version = "2.0.1"
+version = "3.0.0"
 description = "A visitor for Mau that converts the AST into TeX"
 authors = [{name = "Leonardo Giordani", email = "giordani.leonardo@gmail.com"}]
 license = {file = "LICENSE"}
@@ -23,7 +23,7 @@ classifiers = [
 ]
 requires-python = ">=3.7"
 dependencies = [
-    "mau>=4.0.0,<5.0.0",
+    "mau>=5.0.0,<6.0.0",
 ]
 readme = "README.md"
 

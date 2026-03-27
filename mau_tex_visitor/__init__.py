@@ -2,19 +2,31 @@ import re
 from importlib.resources import files
 
 from mau.environment.environment import Environment
-from mau.visitors.jinja_visitor import JinjaVisitor, load_templates_from_path
+from mau.nodes.node import Node
+from mau.visitors.jinja_visitor import JinjaVisitor, _load_templates_from_path
 
-templates = load_templates_from_path(files(__package__).joinpath("templates"))
 
-DEFAULT_TEMPLATES = {}
+TEMPLATES_EXTENSION = ".tex"
+
+HEADER_COMMAND_MAP = {
+    "1": r"chapter",
+    "2": r"section",
+    "3": r"subsection",
+    "4": r"subsubsection",
+    "5": r"paragraph",
+    "6": r"subparagraph",
+}
+
+templates = _load_templates_from_path(
+    str(files(__package__).joinpath("templates")), TEMPLATES_EXTENSION
+)
 
 
 class TexVisitor(JinjaVisitor):
     format_code = "tex"
-    extension = "tex"
+    extension = TEMPLATES_EXTENSION
 
-    default_templates = Environment(templates)
-    default_templates.update(DEFAULT_TEMPLATES)
+    default_templates = Environment.from_dict(templates)
 
     def _escape_text(self, text):
         conv = {
@@ -39,41 +51,47 @@ class TexVisitor(JinjaVisitor):
         )
         return regex.sub(lambda match: conv[match.group()], text)
 
-    def _visit_header(self, node, *args, **kwargs):
-        command_map = {
-            "1": r"chapter",
-            "2": r"section",
-            "3": r"subsection",
-            "4": r"subsubsection",
-            "5": r"paragraph",
-            "6": r"subparagraph",
-        }
+    def _visit_header(self, node: Node, **kwargs) -> dict:
+        result = self._visit_default(node, **kwargs)
 
-        base = super()._visit_header(node, *args, **kwargs)
-        level = str(base["data"].get("level", 6))
-        base["data"]["command"] = command_map.get(level)
+        level = str(min(node.level, 6))
 
-        return base
+        result.update(
+            {
+                "level": level,
+                "internal_id": node.internal_id,
+                "name": node.name,
+                "command": HEADER_COMMAND_MAP.get(level),
+            }
+        )
 
-    def _visit_source__default(self, node, *args, **kwargs):
-        # Highlighers like the package Minted
-        # consider the first line as number 1
-        node.highlights = [i + 1 for i in node.highlights]
+        self._add_visit_content(result, node, **kwargs)
+        self._add_visit_labels(result, node, **kwargs)
 
-        base = super()._visit_source__default(node, *args, escape=False, **kwargs)
-        return base
+        return result
 
-    def _visit_text(self, node, *args, escape=True, **kwargs):
-        base = super()._visit_text(node, *args, **kwargs)
+    def _visit_text(self, node: Node, **kwargs) -> dict:
+        result = super()._visit_text(node, **kwargs)
 
-        if escape:
-            base["data"]["value"] = self._escape_text(base["data"]["value"])
+        result["value"] = self._escape_text(result["value"])
 
-        return base
+        return result
 
-    def _visit_verbatim(self, node, *args, **kwargs):
-        base = super()._visit_verbatim(node, *args, **kwargs)
+    def _visit_verbatim(self, node: Node, **kwargs) -> dict:
+        result = super()._visit_verbatim(node, **kwargs)
 
-        base["data"]["value"] = self._escape_text(base["data"]["value"])
+        result["value"] = self._escape_text(result["value"])
 
-        return base
+        return result
+
+    def _visit_source(self, node: Node, **kwargs) -> dict:
+        # Find all lines that are highlighted.
+        highlighted_lines = [
+            line.line_number for line in node.content if line.highlight_style
+        ]
+
+        result = super()._visit_source(node, **kwargs)
+
+        result["highlights"] = highlighted_lines
+
+        return result
