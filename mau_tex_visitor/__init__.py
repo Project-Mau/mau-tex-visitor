@@ -22,6 +22,32 @@ templates = _load_templates_from_path(
 )
 
 
+# Characters that need escaping in TeX output.
+# All keys are single characters, so alternation
+# order among them is irrelevant.
+_TEX_ESCAPE_MAP = {
+    "&": r"\&",
+    "%": r"\%",
+    "$": r"\$",
+    "#": r"\#",
+    "_": r"\_",
+    "{": r"\{",
+    "}": r"\}",
+    "~": r"\textasciitilde{}",
+    "^": r"\^{}",
+    "\\": r"\textbackslash{}",
+    "<": r"\textless{}",
+    ">": r"\textgreater{}",
+}
+
+_TEX_ESCAPE_RE = re.compile(
+    "|".join(
+        re.escape(key)
+        for key in sorted(_TEX_ESCAPE_MAP, key=len, reverse=True)
+    )
+)
+
+
 class TexVisitor(JinjaVisitor):
     format_code = "tex"
     extension = TEMPLATES_EXTENSION
@@ -29,27 +55,7 @@ class TexVisitor(JinjaVisitor):
     default_templates = Environment.from_dict(templates)
 
     def _escape_text(self, text):
-        conv = {
-            "&": r"\&",
-            "%": r"\%",
-            "$": r"\$",
-            "#": r"\#",
-            "_": r"\_",
-            "{": r"\{",
-            "}": r"\}",
-            "~": r"\textasciitilde{}",
-            "^": r"\^{}",
-            "\\": r"\textbackslash{}",
-            "<": r"\textless{}",
-            ">": r"\textgreater{}",
-        }
-        regex = re.compile(
-            "|".join(
-                re.escape(str(key))
-                for key in sorted(conv.keys(), key=lambda item: -len(item))
-            )
-        )
-        return regex.sub(lambda match: conv[match.group()], text)
+        return _TEX_ESCAPE_RE.sub(lambda m: _TEX_ESCAPE_MAP[m.group()], text)
 
     def _visit_header(self, node: Node, **kwargs) -> dict:
         result = self._visit_default(node, **kwargs)
@@ -61,7 +67,7 @@ class TexVisitor(JinjaVisitor):
                 "level": level,
                 "internal_id": node.internal_id,
                 "name": node.name,
-                "command": HEADER_COMMAND_MAP.get(level),
+                "command": HEADER_COMMAND_MAP[level],
             }
         )
 
