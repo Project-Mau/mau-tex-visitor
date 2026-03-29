@@ -2,6 +2,11 @@
 Changelog
 =========
 
+Version 3.0.0
+=============
+
+- [enhancement] Compatibility with Mau 5
+
 Version 2.0.1
 =============
 
